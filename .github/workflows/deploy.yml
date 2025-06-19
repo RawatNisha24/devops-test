@@ -12,21 +12,23 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Build React app
-      run: |
-        npm install
-        npm run build
+    - name: Install dependencies
+      run: npm install
 
-    - name: Copy build folder to EC2
+    - name: Build React app
+      run: npm run build
+
+    - name: Copy build to EC2 (home folder)
       uses: appleboy/scp-action@v0.1.4
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.SSH_KEY }}
-        source: "build/*"
+        source: "build"
         target: "~/react-deploy-temp"
+        strip_components: 0 
 
-    - name: Run remote SSH commands on EC2
+    - name: Move build to /var/www/html with sudo
       uses: appleboy/ssh-action@v0.1.10
       with:
         host: ${{ secrets.HOST }}
@@ -34,7 +36,7 @@ jobs:
         key: ${{ secrets.SSH_KEY }}
         script: |
           sudo rm -rf /var/www/html/*
-          sudo cp -r ~/react-deploy-temp/* /var/www/html/
+          sudo cp -r ~/react-deploy-temp/build/* /var/www/html/
           sudo chown -R www-data:www-data /var/www/html
           sudo chmod -R 755 /var/www/html
           sudo systemctl restart nginx
